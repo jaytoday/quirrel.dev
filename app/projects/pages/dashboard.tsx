@@ -126,7 +126,7 @@ function AccountSection() {
           </Suspense>
         </li>
 
-        {user?.isSubscriber ? (
+        {user?.isSubscriber && (
           <>
             <li>
               <a
@@ -149,20 +149,6 @@ function AccountSection() {
               </a>
             </li>
           </>
-        ) : (
-          <li>
-            <a
-              className="font-semibold text-teal-500 hover:text-teal-700 transition ease-in-out duration-150"
-              onClick={upgrade}
-              onKeyDown={upgrade}
-              role="button"
-              tabIndex={-1}
-              data-theme="none"
-              data-product="631848"
-            >
-              Upgrade to Pro plan
-            </a>
-          </li>
         )}
 
         <li>
@@ -289,6 +275,21 @@ const Dashboard: BlitzPage = () => {
           </Form>
         </Modal>
 
+        <div className="rounded border-red-300 border bg-red-100 p-4 text-center max-w-lg m-auto">
+          <p>
+            As notified, the hosted instance of Quirrel (this site!) is currently shutting down. If your application still relies on
+            it, please reach out to{" "}
+            <a
+              href="mailto:migration@quirrel.dev"
+              target="_blank"
+              className="text-red-600 hover:text-red-900"
+            >
+              migration@quirrel.dev
+            </a>
+            .
+          </p>
+        </div>
+
         {projectSlugs.length === 0 && (
           <div className="rounded border-orange-300 border bg-orange-100 p-4 text-center max-w-lg m-auto">
             <p>Thanks for signing up to Quirrel! Glad to have you here.</p>
@@ -330,7 +331,7 @@ const Dashboard: BlitzPage = () => {
         <h1 className="text-xl font-semibold text-gray-900 leading-7">Projects</h1>
 
         <CardList
-          emptyText="Once your ready to deploy, create your first project using the button below."
+          emptyText="Once you're ready to deploy, create your first project using the button below."
           items={projectSlugs.map((slug) => ({
             title: slug,
             href: `/projects/${slug}`,

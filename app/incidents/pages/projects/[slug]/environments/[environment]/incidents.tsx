@@ -1,4 +1,5 @@
 import deleteIncidentMutation from "app/incidents/mutations/deleteIncident"
+import deleteAllIncidentsMutation from "app/incidents/mutations/deleteAllIncidents"
 import getIncidents from "app/incidents/queries/getIncidents"
 import Layout from "app/layouts/Layout"
 import {
@@ -122,10 +123,11 @@ function IncidentTable(props: IncidentTableProps) {
 const IncidentsDashboard: BlitzPage = () => {
   const slug = useParam("slug", "string")!
   const environment = useParam("environment", "string")!
+  const [deleteAllIncidents] = useMutation(deleteAllIncidentsMutation)
 
-  const [encryptedIncidentsPages, { fetchMore, canFetchMore }] = useInfiniteQuery(
+  const [encryptedIncidentsPages, { fetchMore, canFetchMore, refetch: refetchIncidents }] = useInfiniteQuery(
     getIncidents,
-    (page = { take: 50, skip: 0 }) => ({
+    (page = { take: 20, skip: 0 }) => ({
       ...page,
       environmentName: environment,
       projectSlug: slug,
@@ -135,9 +137,10 @@ const IncidentsDashboard: BlitzPage = () => {
     }
   )
 
-  const encryptedIncidents = useMemo(() => encryptedIncidentsPages.flatMap((page) => page.items), [
-    encryptedIncidentsPages,
-  ])
+  const encryptedIncidents = useMemo(
+    () => encryptedIncidentsPages.flatMap((page) => page.items),
+    [encryptedIncidentsPages]
+  )
 
   const [decryptedPayloads, setDecryptedPayloads] = useState<Record<string, string>>({})
   const decryptedIncidents = useMemo(() => {
@@ -160,11 +163,18 @@ const IncidentsDashboard: BlitzPage = () => {
 
       await Promise.all(
         encryptedIncidents.map(async (incident) => {
+          const encryptedPayload = incident.jobData.payload
           try {
-            const decryptedPayload = await encryptor.decrypt(incident.jobData.payload)
+            const decryptedPayload = await encryptor.decrypt(encryptedPayload)
 
             decryptedPayloads[incident.id] = decryptedPayload
           } catch (error) {
+            if (encryptedPayload[4] !== ":") {
+              // not encrypted using secure-e2ee
+              decryptedPayloads[incident.id] = encryptedPayload
+              return
+            }
+            
             if (error.message === "Could not decrypt: Auth tag missing.") {
               someCouldNotBeDecryptedBecauseOfMissingAuthTag = true
             }
@@ -172,6 +182,7 @@ const IncidentsDashboard: BlitzPage = () => {
             if (error.message === "Could not decrypt: No matching secret.") {
               someCouldNotBeDecryptedBecauseOfWrongSecret = true
             }
+            
           }
         })
       )
@@ -271,11 +282,27 @@ const IncidentsDashboard: BlitzPage = () => {
           <span>{/* Placeholder for Flex */}</span>
 
           <span>
+            <button
+              onClick={async () => {
+                const sure = window.confirm("Are you sure you want to delete all incidents?")
+                if (!sure) {
+                  return
+                }
+
+                await deleteAllIncidents({ projectSlug: slug, tokenName: environment })
+                await refetchIncidents()
+              }}
+              className="font-semibold text-red-500 hover:text-red-700 transition ease-in-out duration-150 cursor-pointer"
+            >
+              Delete all
+            </button>
             <a
               download="incidents.json"
               href={
                 "data:application/json;base64," +
-                btoa(JSON.stringify(Object.values(decryptedIncidents)))
+                btoa(
+                  unescape(encodeURIComponent(JSON.stringify(Object.values(decryptedIncidents))))
+                )
               }
               className="px-8 font-semibold text-gray-500 hover:text-gray-700 transition ease-in-out duration-150 cursor-pointer"
             >

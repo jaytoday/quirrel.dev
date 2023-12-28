@@ -21,7 +21,7 @@ const incidentPayload = z.object({
     runAt: z.string(),
   }),
   incident: z.object({
-    status: z.number(),
+    status: z.number().default(-1),
     body: z.any(),
   }),
 })
@@ -70,7 +70,7 @@ export default async function incidentReceiver(req: BlitzApiRequest, res: BlitzA
     endpoint: job.endpoint,
     jobId: job.id,
     incidentHttpStatus: "" + incident.status,
-    incident: ellipsize(JSON.stringify(incident.body)),
+    incident: ellipsize(JSON.stringify(incident.body ?? "n/a")),
   })
 
   return res.status(200).end()
